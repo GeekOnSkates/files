@@ -20,6 +20,7 @@ indent_mode=2
 [project]
 name=files
 base_path=/home/geek/code/projects/files/
+description=
 
 [long line marker]
 long_line_behaviour=1
@@ -27,7 +28,7 @@ long_line_column=72
 
 [files]
 current_page=0
-FILE_NAME_0=1019;C;0;EUTF-8;1;1;0;%2Fhome%2Fgeek%2Fcode%2Fprojects%2Flinux%2Ffiles%2Fmain.c;0;4
+FILE_NAME_0=550;C;0;EUTF-8;1;1;0;%2Fhome%2Fgeek%2Fcode%2Fprojects%2Flinux%2Ffiles%2Fmain.c;0;4
 
 [VTE]
 last_dir=/home/geek/code/projects/linux/files

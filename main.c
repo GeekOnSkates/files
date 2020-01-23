@@ -1,20 +1,50 @@
 #include <stdlib.h>
+#include <dirent.h>
 #include "nc-windows.h"
 #include "say.h"
 
 WINDOW *path, *list;
-unsigned int cursor;
+unsigned int cursor, list_width, list_height;
 unsigned int max = 50;
 char *text;
 
+void look4files() {
+	struct dirent *dir;
+	DIR *d = opendir(text);
+	curs_set(0);
+	int x, y;
+	getyx(stdscr, y, x);
+	move(5, 1);
+	if (!d) {
+		move(y, x);
+		curs_set(1);
+		return;
+	}
+	for (int i=0; i<list_height; i++)
+		for (int j=0; j<list_width; j++)
+			mvaddch(i + 4, j + 3, ' ');
+	unsigned char i = 0;
+	while ((dir = readdir(d)) != NULL) {
+		move(i + 4, 1);
+		printw(dir->d_name);
+		i++;
+		if (i == list_height) break;
+    }
+    closedir(d);
+    move(y, x);
+    curs_set(1);
+}
+
 int main(int argc, char *argv[]) {
 	initscr();
-	cbreak();
+	raw();
 	keypad(stdscr, TRUE);
 	refresh();
-		
+	
+	list_width = COLS - 4;
+	list_height = LINES - 6;
 	path = create_window(0, 0, COLS, 3);
-	list = create_window(0, 3, COLS, LINES - 4);
+	list = create_window(0, 3, COLS, list_height + 2); // +2 for borders
 	mvaddstr(LINES - 1, 0, "Press F1 for a menu.");
 	move(1, 1);
 	
@@ -28,7 +58,7 @@ int main(int argc, char *argv[]) {
 	while(ch = getch()) {
 		if (ch == KEY_F(1)) break;
 		if (ch == KEY_BACKSPACE) {
-			say("backspace", SAY_NOW | SAY_ASYNC);
+			//say("backspace", SAY_NOW | SAY_ASYNC);
 			text[cursor] = 0;
 			if (cursor == 0) {
 				move(1, 1);
@@ -49,7 +79,9 @@ int main(int argc, char *argv[]) {
 		for (int i=0; i<COLS - 4; i++)
 			mvaddch(1, 1 + i, ' ');
 		mvprintw(1, 1, text);
+		look4files();
 		wrefresh(path);
+		wrefresh(list);
 	}
 	
 	free(text);
