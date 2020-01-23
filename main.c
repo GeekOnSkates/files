@@ -1,8 +1,7 @@
 #include <stdlib.h>
-#include <dirent.h>
-#include <espeak/speak_lib.h>
 #include "nc-windows.h"
 #include "say.h"
+#include "file-data.h"
 
 WINDOW *path, *list;
 unsigned int cursor, list_width, list_height;
@@ -10,28 +9,25 @@ unsigned int max = 50;
 char *text;
 
 void look4files() {
-	struct dirent *dir;
-	DIR *d = opendir(text);
 	curs_set(0);
 	int x, y;
 	getyx(stdscr, y, x);
+	
 	move(5, 1);
-	if (!d) {
-		move(y, x);
-		curs_set(1);
-		return;
-	}
 	for (int i=0; i<list_height; i++)
 		for (int j=0; j<list_width; j++)
 			mvaddch(i + 4, j + 3, ' ');
+	
+	FileList *files = get_updated_files(text, files);
+	if (files == NULL) return;
 	unsigned char i = 0;
-	while ((dir = readdir(d)) != NULL) {
+	while(files->next != NULL) {
 		move(i + 4, 1);
-		printw(dir->d_name);
+		printw("%s", files->details->d_name);
 		i++;
 		if (i == list_height) break;
-    }
-    closedir(d);
+		files = files->next;
+	}
     move(y, x);
     curs_set(1);
 }
@@ -64,12 +60,9 @@ int main(int argc, char *argv[]) {
 		if (ch == KEY_BACKSPACE) {
 			say("backspace", SAY_NOW | SAY_ASYNC);
 			text[cursor] = 0;
-			if (cursor == 0) {
-				move(1, 1);
-			}
-			else {
-				cursor--;
-			}
+			if (cursor == 0) continue;
+			if (cursor >= 0) cursor--;
+			move(1, cursor);
 		}
 		else {
 			text[cursor] = ch;
@@ -80,7 +73,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		move(1, 1);
-		for (int i=0; i<COLS - 4; i++)
+		for (int i=0; i<list_width; i++)
 			mvaddch(1, 1 + i, ' ');
 		mvprintw(1, 1, text);
 		look4files();
