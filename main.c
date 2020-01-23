@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <dirent.h>
+#include <espeak/speak_lib.h>
 #include "nc-windows.h"
 #include "say.h"
 
@@ -40,7 +41,10 @@ int main(int argc, char *argv[]) {
 	raw();
 	keypad(stdscr, TRUE);
 	refresh();
-	
+	if (!speech_enabled()) {
+		// TO-DO: Record espeak saying speech was not able to load (lol)
+		return 1;
+	}
 	list_width = COLS - 4;
 	list_height = LINES - 6;
 	path = create_window(0, 0, COLS, 3);
@@ -58,7 +62,7 @@ int main(int argc, char *argv[]) {
 	while(ch = getch()) {
 		if (ch == KEY_F(1)) break;
 		if (ch == KEY_BACKSPACE) {
-			//say("backspace", SAY_NOW | SAY_ASYNC);
+			say("backspace", SAY_NOW | SAY_ASYNC);
 			text[cursor] = 0;
 			if (cursor == 0) {
 				move(1, 1);
