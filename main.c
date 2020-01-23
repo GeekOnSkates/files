@@ -65,6 +65,7 @@ int main(int argc, char *argv[]) {
 			move(1, cursor);
 		}
 		else {
+			say_key(ch, SAY_NOW | SAY_ASYNC);
 			text[cursor] = ch;
 			cursor++;
 			if (cursor == max) {

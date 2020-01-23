@@ -6,14 +6,14 @@
 typedef struct _FileList {
 	struct dirent *details;
 	struct _FileList *next;
-	struct _FileList *previous;
+	unsigned int ID;
 } FileList;
 
-FileList *init_FileList(struct dirent *details) {
+FileList *init_FileList(struct dirent *details, unsigned int id) {
 	FileList *fl = malloc(sizeof(FileList));
 	fl->details = details;
+	fl->ID = id;
 	fl->next = NULL;
-	fl->previous = NULL;
 	return fl;
 }
 
@@ -22,11 +22,12 @@ FileList *get_updated_files(const char *text, FileList *head) {
 	DIR *d = opendir(text);
 	if (!d) return NULL;
 	
-	FileList *temp;
+	FileList *temp; int ID = 0;
 	while ((dir = readdir(d)) != NULL) {
-		temp = init_FileList(dir);
+		temp = init_FileList(dir, ID);
 		temp->next = head;
 		head = temp;
+		ID++;
 	}
     closedir(d);
     return head;
