@@ -51,4 +51,50 @@ char ui_updated(unsigned int list_width, unsigned int list_height, const char *t
     return 1;
 }
 
+void enter_text(int key, unsigned int *cursor, char *text) {
+	if (key == KEY_BACKSPACE) {
+		say("backspace", SAY_NOW | SAY_ASYNC);
+		if ((*cursor) > 0) (*cursor)--;
+		int len = strlen(text);
+		for (int i=(*cursor); i<len; i++)
+			text[i] = text[i + 1];
+		if ((*cursor) == 0) {
+			move(1, 1);
+		}
+		else move(1, (*cursor));
+	}
+	else if (key == KEY_DC) {
+		say("delete", SAY_NOW | SAY_ASYNC);
+		int len = strlen(text);
+		for (int i=(*cursor); i<len; i++)
+			text[i] = text[i + 1];
+	}
+	else if (key == KEY_LEFT) {
+		if ((*cursor) > 0) (*cursor)--;
+		if (text[(*cursor)] == 0)
+			say("blank", SAY_NOW | SAY_ASYNC);
+		else say_key(text[(*cursor)], SAY_NOW | SAY_ASYNC);
+	}
+	else if (key == KEY_RIGHT) {
+		if (((*cursor) != 0 || text[(*cursor)] != 0) && (*cursor) <= strlen(text) - 1)
+			(*cursor)++;
+		if (text[(*cursor)] == 0)
+			say("blank", SAY_NOW | SAY_ASYNC);
+		else say_key(text[(*cursor)], SAY_NOW | SAY_ASYNC);
+	}
+	else if (key == KEY_HOME) {
+		(*cursor) = 0;
+		say_key(text[(*cursor)], SAY_NOW | SAY_ASYNC);
+	}
+	else if (key == KEY_END) {
+		(*cursor) = strlen(text);
+		say_key(text[(*cursor)], SAY_NOW | SAY_ASYNC);
+	}
+	else {
+		say_key(key, SAY_NOW | SAY_ASYNC);
+		text[(*cursor)] = key;
+		(*cursor)++;
+	}
+}
+
 #endif
