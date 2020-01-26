@@ -2,6 +2,7 @@
 #define _FILE_DATA_H_
 
 #include <dirent.h>
+#include <sys/stat.h>
 
 typedef struct _FileList {
 	struct dirent *details;
@@ -34,6 +35,16 @@ FileList *get_updated_files(const char *text) {
 	}
     closedir(d);
     return head;
+}
+
+char is_folder(const char* path) {
+    struct stat buf;
+    stat(path, &buf);
+    return S_ISDIR(buf.st_mode);
+}
+
+char is_executable(const char *path) {
+	return 0;	// for now
 }
 
 #endif

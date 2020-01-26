@@ -90,8 +90,9 @@ char ui_updated(unsigned int list_width, unsigned int list_height, const char *t
 			if (files == NULL || i == list_height) break;
 			char line[list_width + 3];
 			ui_string_pad(line, files->details->d_name, list_width + 3);
-			if (line[0] != '.' && line[1] != ' ')
-				ui_add2list(line, i + 4, selection, files->ID);
+			if (line[0] == '.' && line[1] == ' ' && line[2] == ' ')
+				continue;
+			ui_add2list(line, i + 4, selection, files->ID);
 			files = files->next;
 		}
 	}

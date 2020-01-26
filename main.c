@@ -7,6 +7,8 @@
 int main(int argc, char *argv[]) {
 	char text[PATH_MAX], selectedFile[PATH_MAX];
 	memset(text, 0, PATH_MAX);
+	char fullPath[PATH_MAX];
+	memset(fullPath, 0, PATH_MAX);
 	initscr();
 	unsigned int cursor = 0, list_width = COLS - 4, list_height = LINES - 6;
 	raw();
@@ -25,13 +27,14 @@ int main(int argc, char *argv[]) {
 	while(ch = getch()) {
 		if (ch == KEY_F(1)) break;
 		if (ch == KEY_UP) {
-			char found = 0;
 			FileList *f = get_updated_files(text);
 			if (f == NULL) {
 				say("No files found", SAY_NOW | SAY_ASYNC);
 				continue;
 			}
-			if (selection >= f->ID)
+			if (selection == -1)
+				selection = 0;
+			else if (selection >= f->ID)
 				selection = 0;
 			else selection++;
 			while(f->next != NULL) {
@@ -44,13 +47,12 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		else if (ch == KEY_DOWN) {
-			char found = 0;
 			FileList *f = get_updated_files(text);
 			if (f == NULL) {
 				say("No files found", SAY_NOW | SAY_ASYNC);
 				continue;
 			}
-			if (selection <= 0)
+			if (selection < 0)
 				selection = f->ID;
 			else selection--;
 			while(f->next != NULL) {
@@ -62,6 +64,37 @@ int main(int argc, char *argv[]) {
 				f = f->next;
 			}
 		}
+		else if (ch == KEY_ENTER || ch == 10) {
+			strcpy(fullPath, text);
+			if (fullPath[strlen(fullPath) - 1] != '/')
+				strcat(fullPath, "/");
+			strcat(fullPath, selectedFile);
+			if (selection == -1) {
+				say("Please select a file.", SAY_NOW | SAY_ASYNC);
+				continue;
+			}
+			if (is_folder(fullPath)) {
+				strcpy(text, fullPath);
+				cursor = strlen(text);
+				selection = -1;
+			}
+			if (is_executable(fullPath)) {
+				system(fullPath);
+				endwin();
+				initscr();
+			}
+			else {
+				char command[PATH_MAX + 10];
+				strcpy(command, "nano \"");
+				strcat(command, fullPath);
+				strcat(command, "\"");
+				stop();
+				system(command);
+				endwin();
+				initscr();
+			}
+		}
+		else if (ch > KEY_F(1) && ch <= KEY_F(32)) continue;
 		else {
 			selection = -1;
 			curs_set(1);
@@ -79,11 +112,6 @@ int main(int argc, char *argv[]) {
 	destroy_window(list);
 	clear();
 	endwin();
-	// TO-DO: If the user presses Enter, set selectedFile
-	// to a full path (if "struct DIREnts" have those, or
-	// build the path similar to this (checking if text
-	// ends in a / if necessary).  This is for other apps,
-	// so we could pipe the path to i.e. word processors.
-	if (argc > 1) printf("%s/%s", text, selectedFile);
+	if (argc > 1) printf("%s", fullPath);
 	return 0;
 }
