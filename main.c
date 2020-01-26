@@ -32,15 +32,13 @@ int main(int argc, char *argv[]) {
 				say("No files found", SAY_NOW | SAY_ASYNC);
 				continue;
 			}
-			if (selection == -1)
-				selection = 0;
-			else if (selection >= f->ID)
+			if (selection >= f->ID)
 				selection = 0;
 			else selection++;
 			while(f->next != NULL) {
 				if (f->ID == selection) {
 					strcpy(selectedFile, f->details->d_name);
-					say(f->details->d_name, SAY_NOW | SAY_ASYNC);
+					say(selectedFile, SAY_NOW | SAY_ASYNC);
 					break;
 				}
 				f = f->next;
@@ -52,13 +50,13 @@ int main(int argc, char *argv[]) {
 				say("No files found", SAY_NOW | SAY_ASYNC);
 				continue;
 			}
-			if (selection < 0)
+			if (selection <= 0)
 				selection = f->ID;
 			else selection--;
 			while(f->next != NULL) {
 				if (f->ID == selection) {
 					strcpy(selectedFile, f->details->d_name);
-					say(f->details->d_name, SAY_NOW | SAY_ASYNC);
+					say(selectedFile, SAY_NOW | SAY_ASYNC);
 					break;
 				}
 				f = f->next;
