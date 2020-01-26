@@ -39,12 +39,15 @@ FileList *get_updated_files(const char *text) {
 
 char is_folder(const char* path) {
     struct stat buf;
-    stat(path, &buf);
+    if (stat(path, &buf) < 0) return 0;
     return S_ISDIR(buf.st_mode);
 }
 
 char is_executable(const char *path) {
-	return 0;	// for now
+	struct stat buf;
+    if (stat(path, &buf) < 0) return 0;
+    if ((buf.st_mode & S_IEXEC) != 0) return 1;
+    return 0;
 }
 
 #endif
