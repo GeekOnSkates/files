@@ -3,6 +3,7 @@
 
 #include <ncurses.h>
 #include "file-data.h"
+#include "say.h"
 
 char ui_cleared(unsigned int list_width, unsigned int list_height) {
 	char *spaces = malloc(list_width + 1);
@@ -15,11 +16,26 @@ char ui_cleared(unsigned int list_width, unsigned int list_height) {
 	return 1;
 }
 
-void ui_show_instructions(unsigned int list_width) {
-	mvprintw(LINES - 1, 0, "For help press F1.");
-	int chars_left = list_width - 20;
-	if (chars_left >= 22)
+void ui_show_instructions() {
+	curs_set(0);
+	mvprintw(LINES - 1, 1, "For help press F1.");
+	int chars_left = COLS - 21;
+	if (chars_left >= 22) {
 		mvprintw(LINES - 1, 22, "To exit press F4.");
+		chars_left -= 21;
+	}
+	if (chars_left >= 30) {
+		const char *version = "Files version 1.0";
+		mvprintw(LINES - 1, COLS - strlen(version), version);
+		move(1,1);
+		say(version, SAY_NOW | SAY_ASYNC);
+		say("For help press F1. To exit press F4", SAY_ASYNC);
+	}
+	else {
+		move(1,1);
+		say("For help press F1. To exit press F4", SAY_NOW | SAY_ASYNC);
+	}
+	curs_set(1);
 }
 
 char ui_updated(unsigned int list_width, unsigned int list_height, const char *text) {
@@ -36,11 +52,6 @@ char ui_updated(unsigned int list_width, unsigned int list_height, const char *t
 	}
 	unsigned char i = 0;
 	while(files->next != NULL) {
-		if (files->details->d_name[0] == '.'
-			&& files->details->d_name[1] == '.') {
-				files = files->next;
-				continue;
-			}
 		move(i + 4, 1);
 		printw("%s", files->details->d_name);
 		files = files->next;

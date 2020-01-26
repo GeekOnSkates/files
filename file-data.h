@@ -23,8 +23,10 @@ FileList *get_updated_files(const char *text) {
 	if (!d) return NULL;
 	
 	FileList *head = NULL;
-	FileList *temp; int ID = 0;
+	FileList *temp; int ID = -1;
 	while ((dir = readdir(d)) != NULL) {
+		if (dir->d_name[0] == '.' && dir->d_name[1] == '.')
+			continue;
 		temp = init_FileList(dir, ID);
 		temp->next = head;
 		head = temp;
