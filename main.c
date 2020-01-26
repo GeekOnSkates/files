@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 			curs_set(1);
 			enter_text(ch, &cursor, text);
 		}
-		if (!ui_updated(list_width, list_height, text, selection)) {
+		if (!ui_updated(list_width, list_height, text, selection, ch)) {
 			perror("The program crashed with the following info:\n");
 			break;
 		}

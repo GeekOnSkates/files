@@ -38,33 +38,38 @@ void ui_show_instructions() {
 	curs_set(1);
 }
 
-char ui_updated(unsigned int list_width, unsigned int list_height, const char *text, unsigned int selection) {
+void ui_string_pad(char *line, char *value, unsigned int list_width) {
+	memset(line, 0, list_width);
+	int length = strlen(value);
+	for (int i=0; i<list_width - 1; i++) {
+		if (i >= length) line[i] = ' ';
+		else line[i] = value[i];
+	}
+}
+
+void ui_add2list(char *filename, int y, unsigned int selection, unsigned int ID) {
+	move(y, 1);
+	if (selection == ID) attron(A_REVERSE);
+	printw("%s", filename);
+	attroff(A_REVERSE);
+}
+
+char ui_updated(unsigned int list_width, unsigned int list_height, const char *text, unsigned int selection, int key) {
 	curs_set(0);
-	int x, y;
-	getyx(stdscr, y, x);
 	if (!ui_cleared(list_width, list_height)) return 1;
-	
 	FileList *files = get_updated_files(text);
 	if (files == NULL) {
 		mvprintw(1, 1, text);
 		curs_set(1);
 		return 1;
 	}
-	unsigned char i = 0;
-	while(files->next != NULL) {
-		char line[list_width];
-		memset(line, 0, list_width);
-		int length = strlen(files->details->d_name);
-		for (int i=0; i<list_width - 1; i++) {
-			if (i >= length) line[i] = ' ';
-			else line[i] = files->details->d_name[i];
-		}
-		move(i + 4, 1);
-		if (selection == files->ID) attron(A_REVERSE);
-		printw("%s", line);
-		attroff(A_REVERSE);
+	unsigned int total = files->ID;
+	for (int i = 0; i<total; i++) {
+		if (i == list_height) break;
+		char line[list_width + 3];
+		ui_string_pad(line, files->details->d_name, list_width + 3);
+		ui_add2list(line, i + 4, selection, files->ID);
 		files = files->next;
-		i++;
 	}
     mvprintw(1, 1, text);
     if (selection == -1) curs_set(1);
