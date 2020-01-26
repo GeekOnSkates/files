@@ -28,11 +28,40 @@ int main(int argc, char *argv[]) {
 		if (ch == KEY_BACKSPACE) {
 			say("backspace", SAY_NOW | SAY_ASYNC);
 			if (cursor > 0) cursor--;
-			text[cursor] = 0;
+			int len = strlen(text);
+			for (int i=cursor; i<len; i++)
+				text[i] = text[i + 1];
 			if (cursor == 0) {
 				move(1, 1);
 			}
 			else move(1, cursor);
+		}
+		else if (ch == KEY_DC) {
+			say("delete", SAY_NOW | SAY_ASYNC);
+			int len = strlen(text);
+			for (int i=cursor; i<len; i++)
+				text[i] = text[i + 1];
+		}
+		else if (ch == KEY_LEFT) {
+			if (cursor > 0) cursor--;
+			if (text[cursor] == 0)
+				say("blank", SAY_NOW | SAY_ASYNC);
+			else say_key(text[cursor], SAY_NOW | SAY_ASYNC);
+		}
+		else if (ch == KEY_RIGHT) {
+			if ((cursor != 0 || text[cursor] != 0) && cursor <= strlen(text) - 1)
+				cursor++;
+			if (text[cursor] == 0)
+				say("blank", SAY_NOW | SAY_ASYNC);
+			else say_key(text[cursor], SAY_NOW | SAY_ASYNC);
+		}
+		else if (ch == KEY_HOME) {
+			cursor = 0;
+			say_key(text[cursor], SAY_NOW | SAY_ASYNC);
+		}
+		else if (ch == KEY_END) {
+			cursor = strlen(text);
+			say_key(text[cursor], SAY_NOW | SAY_ASYNC);
 		}
 		else if (ch == KEY_DOWN) {
 			FileList *f = get_updated_files(text);
@@ -49,11 +78,9 @@ int main(int argc, char *argv[]) {
 		}
 		if (!ui_updated(list_width, list_height, text)) {
 			perror("The program crashed with the following info:\n");
-			destroy_window(path);
-			destroy_window(list);
-			endwin();
-			return 1;
+			break;
 		}
+		move(1, cursor + 1);
 		wrefresh(path);
 		wrefresh(list);
 	}
