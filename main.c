@@ -8,27 +8,38 @@ unsigned int cursor, list_width, list_height;
 unsigned int max = 50;
 char *text;
 
-void look4files() {
+void updateList() {
 	curs_set(0);
 	int x, y;
 	getyx(stdscr, y, x);
 	
-	move(5, 1);
+	char *spaces = malloc(list_width + 1);
+	if (spaces == NULL) exit(123);	// for now
+	memset(spaces, ' ', list_width);
+	mvprintw(1, 1, spaces);
 	for (int i=0; i<list_height; i++)
-		for (int j=0; j<list_width; j++)
-			mvaddch(i + 4, j + 3, ' ');
+		mvprintw(i + 4, 1, spaces);
+	free(spaces);
 	
-	FileList *files = get_updated_files(text, files);
-	if (files == NULL) return;
+	FileList *files = get_updated_files(text);
+	if (files == NULL) {
+		mvprintw(1, 1, text);
+		curs_set(1);
+		return;
+	}
 	unsigned char i = 0;
 	while(files->next != NULL) {
+		if (files->details->d_name[0] == '.'
+			&& files->details->d_name[1] == '.') {
+				files = files->next;
+				continue;
+			}
 		move(i + 4, 1);
 		printw("%s", files->details->d_name);
-		i++;
-		if (i == list_height) break;
 		files = files->next;
+		i++;
 	}
-    move(y, x);
+    mvprintw(1, 1, text);
     curs_set(1);
 }
 
@@ -45,7 +56,7 @@ int main(int argc, char *argv[]) {
 	list_height = LINES - 6;
 	path = create_window(0, 0, COLS, 3);
 	list = create_window(0, 3, COLS, list_height + 2); // +2 for borders
-	mvaddstr(LINES - 1, 0, "Press F1 for a menu.");
+	mvaddstr(LINES - 1, 0, "Files 1.0     For help press F1.    To exit press F4.");
 	move(1, 1);
 	
 	text = malloc(50);
@@ -55,14 +66,28 @@ int main(int argc, char *argv[]) {
 	}
 	
 	int ch;
+	int selection = -1;
 	while(ch = getch()) {
 		if (ch == KEY_F(1)) break;
 		if (ch == KEY_BACKSPACE) {
 			say("backspace", SAY_NOW | SAY_ASYNC);
+			if (text[cursor] == 0) cursor--;
 			text[cursor] = 0;
-			if (cursor == 0) continue;
+			if (cursor == 0) {
+				printw(" ");
+				move(1,1);
+				continue;
+			}
 			if (cursor >= 0) cursor--;
 			move(1, cursor);
+		}
+		else if (ch == KEY_DOWN) {
+			FileList *f = get_updated_files(text);
+			if (f == NULL) continue;
+			while(f->next != NULL) {
+				say(f->details->d_name, 0);
+				f = f->next;
+			}
 		}
 		else {
 			say_key(ch, SAY_NOW | SAY_ASYNC);
@@ -73,11 +98,7 @@ int main(int argc, char *argv[]) {
 				max += 10;
 			}
 		}
-		move(1, 1);
-		for (int i=0; i<list_width; i++)
-			mvaddch(1, 1 + i, ' ');
-		mvprintw(1, 1, text);
-		look4files();
+		updateList();
 		wrefresh(path);
 		wrefresh(list);
 	}

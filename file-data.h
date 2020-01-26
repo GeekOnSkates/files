@@ -17,11 +17,12 @@ FileList *init_FileList(struct dirent *details, unsigned int id) {
 	return fl;
 }
 
-FileList *get_updated_files(const char *text, FileList *head) {
+FileList *get_updated_files(const char *text) {
 	struct dirent *dir;
 	DIR *d = opendir(text);
 	if (!d) return NULL;
 	
+	FileList *head = NULL;
 	FileList *temp; int ID = 0;
 	while ((dir = readdir(d)) != NULL) {
 		temp = init_FileList(dir, ID);
