@@ -38,7 +38,7 @@ void ui_show_instructions() {
 	curs_set(1);
 }
 
-char ui_updated(unsigned int list_width, unsigned int list_height, const char *text) {
+char ui_updated(unsigned int list_width, unsigned int list_height, const char *text, unsigned int selection) {
 	curs_set(0);
 	int x, y;
 	getyx(stdscr, y, x);
@@ -52,13 +52,22 @@ char ui_updated(unsigned int list_width, unsigned int list_height, const char *t
 	}
 	unsigned char i = 0;
 	while(files->next != NULL) {
+		char line[list_width];
+		memset(line, 0, list_width);
+		int length = strlen(files->details->d_name);
+		for (int i=0; i<list_width - 1; i++) {
+			if (i >= length) line[i] = ' ';
+			else line[i] = files->details->d_name[i];
+		}
 		move(i + 4, 1);
-		printw("%s", files->details->d_name);
+		if (selection == files->ID) attron(A_REVERSE);
+		printw("%s", line);
+		attroff(A_REVERSE);
 		files = files->next;
 		i++;
 	}
     mvprintw(1, 1, text);
-    curs_set(1);
+    if (selection == -1) curs_set(1);
     return 1;
 }
 

@@ -64,14 +64,13 @@ int main(int argc, char *argv[]) {
 		}
 		else {
 			selection = -1;
+			curs_set(1);
 			enter_text(ch, &cursor, text);
 		}
-		if (!ui_updated(list_width, list_height, text)) {
+		if (!ui_updated(list_width, list_height, text, selection)) {
 			perror("The program crashed with the following info:\n");
 			break;
 		}
-		mvprintw(0, 0, "%d  ", selection);
-		mvprintw(0, 10, "\"%s\"       ", selectedFile);
 		move(1, cursor + 1);
 		wrefresh(path);
 		wrefresh(list);
@@ -80,5 +79,11 @@ int main(int argc, char *argv[]) {
 	destroy_window(list);
 	clear();
 	endwin();
+	// TO-DO: If the user presses Enter, set selectedFile
+	// to a full path (if "struct DIREnts" have those, or
+	// build the path similar to this (checking if text
+	// ends in a / if necessary).  This is for other apps,
+	// so we could pipe the path to i.e. word processors.
+	if (argc > 1) printf("%s/%s", text, selectedFile);
 	return 0;
 }
