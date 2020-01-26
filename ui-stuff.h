@@ -64,12 +64,36 @@ char ui_updated(unsigned int list_width, unsigned int list_height, const char *t
 		return 1;
 	}
 	unsigned int total = files->ID;
-	for (int i = 0; i<total; i++) {
-		if (i == list_height) break;
-		char line[list_width + 3];
-		ui_string_pad(line, files->details->d_name, list_width + 3);
-		ui_add2list(line, i + 4, selection, files->ID);
-		files = files->next;
+	if (selection == -1) {
+		for (int i = 0; i<=total; i++) {
+			if (i == list_height) break;
+			char line[list_width + 3];
+			ui_string_pad(line, files->details->d_name, list_width + 3);
+			ui_add2list(line, i + 4, selection, files->ID);
+			files = files->next;
+		}
+	}
+	else {
+		int pages = total / list_height;
+		int page = 0, counter = total - selection;
+		while(counter > list_height - 1) {
+			page++;
+			counter -= list_height;
+			for (int i=0; i<list_height; i++) {
+				if (files == NULL) break;
+				files = files->next;
+			}
+		}
+		// Un-comment this next line to debug
+		//mvprintw(0, 0, "selection = %d; total (top ID) = %d; list_height = %d; page %d of %d  ", selection, total, list_height, page, pages);
+		for (int i = 0; i<=total; i++) {
+			if (files == NULL || i == list_height) break;
+			char line[list_width + 3];
+			ui_string_pad(line, files->details->d_name, list_width + 3);
+			if (line[0] != '.' && line[1] != ' ')
+				ui_add2list(line, i + 4, selection, files->ID);
+			files = files->next;
+		}
 	}
     mvprintw(1, 1, text);
     if (selection == -1) curs_set(1);
