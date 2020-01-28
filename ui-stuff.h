@@ -5,6 +5,149 @@
 #include "file-data.h"
 #include "say.h"
 
+#define WINDOW_EXIT 0
+#define WINDOW_MAIN 1
+#define WINDOW_CONFIRM_DELETE 2
+
+char ui_cleared(unsigned int list_width, unsigned int list_height);
+void ui_show_instructions(char speak);
+char ui_updated(unsigned int list_width, unsigned int list_height, const char *text, unsigned int selection, int key);
+void enter_text(int key, unsigned int *cursor, char *text);
+
+char mainScreen(char speak, char *fullPath) {
+	char text[PATH_MAX], selectedFile[PATH_MAX];
+	memset(text, 0, PATH_MAX);
+	unsigned int cursor = 0, list_width = COLS - 4, list_height = LINES - 6;
+	WINDOW *path = create_window(0, 0, COLS, 3);
+	WINDOW *list = create_window(0, 3, COLS, list_height + 2); // +2 for borders
+	ui_show_instructions(speak);
+	move(1, 1);
+	
+	int ch, selection = -1;
+	while(ch = getch()) {
+		if (ch == KEY_F(1)) break;
+		if (ch == KEY_DC && selection != -1) {
+			strcpy(fullPath, text);
+			if (fullPath[strlen(fullPath) - 1] != '/')
+				strcat(fullPath, "/");
+			strcat(fullPath, selectedFile);
+			destroy_window(path);
+			destroy_window(list);
+			return WINDOW_CONFIRM_DELETE;
+		}
+		if (ch == KEY_UP) {
+			FileList *f = get_updated_files(text);
+			if (f == NULL) {
+				say("No files found", SAY_NOW | SAY_ASYNC);
+				continue;
+			}
+			if (selection >= f->ID)
+				selection = 0;
+			else selection++;
+			while(f->next != NULL) {
+				if (f->ID == selection) {
+					strcpy(selectedFile, f->details->d_name);
+					say(selectedFile, SAY_NOW | SAY_ASYNC);
+					break;
+				}
+				f = f->next;
+			}
+		}
+		else if (ch == KEY_DOWN) {
+			FileList *f = get_updated_files(text);
+			if (f == NULL) {
+				say("No files found", SAY_NOW | SAY_ASYNC);
+				continue;
+			}
+			if (selection <= 0)
+				selection = f->ID;
+			else selection--;
+			while(f->next != NULL) {
+				if (f->ID == selection) {
+					strcpy(selectedFile, f->details->d_name);
+					say(selectedFile, SAY_NOW | SAY_ASYNC);
+					break;
+				}
+				f = f->next;
+			}
+		}
+		else if (ch == KEY_ENTER || ch == 10) {
+			strcpy(fullPath, text);
+			if (fullPath[strlen(fullPath) - 1] != '/')
+				strcat(fullPath, "/");
+			strcat(fullPath, selectedFile);
+			if (selection == -1) {
+				say("Please select a file.", SAY_NOW | SAY_ASYNC);
+				continue;
+			}
+			if (is_folder(fullPath)) {
+				strcpy(text, fullPath);
+				cursor = strlen(text);
+				selection = -1;
+			}
+			if (is_executable(fullPath)) {
+				system(fullPath);
+				endwin();
+				initscr();
+			}
+			else {
+				char command[PATH_MAX + 10];
+				strcpy(command, "nano \"");
+				strcat(command, fullPath);
+				strcat(command, "\"");
+				stop();
+				system(command);
+				endwin();
+				initscr();
+			}
+		}
+		else if (ch > KEY_F(1) && ch <= KEY_F(32)) continue;
+		else {
+			selection = -1;
+			curs_set(1);
+			enter_text(ch, &cursor, text);
+		}
+		if (!ui_updated(list_width, list_height, text, selection, ch)) {
+			perror("The program crashed with the following info:\n");
+			return WINDOW_EXIT;
+		}
+		move(1, cursor + 1);
+		wrefresh(path);
+		wrefresh(list);
+	}
+	destroy_window(path);
+	destroy_window(list);
+	return WINDOW_EXIT;
+}
+
+char confirmDelete(char *fullPath) {
+	WINDOW *dialog = create_window(0, 0, COLS, LINES);
+	say("Are you sure you want to delete this file?", SAY_NOW | SAY_ASYNC);
+	say(fullPath, SAY_ASYNC);
+	say("Press Y or N", SAY_ASYNC);
+	while(1) {
+		mvwprintw(dialog, 1, 1, "Are you sure you want to delete this file?");
+		mvwprintw(dialog, 3, 5, "%s", fullPath);
+		mvwprintw(dialog, 5, 1, "Press y or n:");
+		wrefresh(dialog);
+		noecho();
+		char ch = wgetch(dialog);
+		echo();
+		if (ch == 'y') {
+			break;
+		}
+		else if (ch == 'n') {
+			break;
+		}
+		else {
+			mvwprintw(dialog, 7, 1, "Invalid choice.");
+			say("Invalid choice.", SAY_NOW | SAY_ASYNC);
+		}
+	}
+	destroy_window(dialog);
+	return WINDOW_MAIN;
+}
+
 char ui_cleared(unsigned int list_width, unsigned int list_height) {
 	char *spaces = malloc(list_width + 1);
 	if (spaces == NULL) return 0;
@@ -16,7 +159,7 @@ char ui_cleared(unsigned int list_width, unsigned int list_height) {
 	return 1;
 }
 
-void ui_show_instructions() {
+void ui_show_instructions(char speak) {
 	curs_set(0);
 	mvprintw(LINES - 1, 1, "For help press F1.");
 	int chars_left = COLS - 21;
@@ -28,12 +171,14 @@ void ui_show_instructions() {
 		const char *version = "Files version 1.0";
 		mvprintw(LINES - 1, COLS - strlen(version), version);
 		move(1,1);
-		say(version, SAY_NOW | SAY_ASYNC);
-		say("For help press F1. To exit press F4", SAY_ASYNC);
+		if (speak) {
+			say(version, SAY_NOW | SAY_ASYNC);
+			say("For help press F1. To exit press F4", SAY_ASYNC);
+		}
 	}
 	else {
 		move(1,1);
-		say("For help press F1. To exit press F4", SAY_NOW | SAY_ASYNC);
+		if (speak) say("For help press F1. To exit press F4", SAY_NOW | SAY_ASYNC);
 	}
 	curs_set(1);
 }
