@@ -3,6 +3,7 @@
 
 #include <dirent.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 typedef struct _FileList {
 	struct dirent *details;
@@ -48,6 +49,11 @@ char is_executable(const char *path) {
     if (stat(path, &buf) < 0) return 0;
     if ((buf.st_mode & S_IEXEC) != 0) return 1;
     return 0;
+}
+
+int delete_file(const char *path) {
+	if (is_folder(path)) return rmdir(path) == 0 ? 0 : errno;
+	return unlink(path) == 0 ? 0 : errno;
 }
 
 #endif

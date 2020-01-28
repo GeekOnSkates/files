@@ -2,6 +2,7 @@
 #define _UI_STUFF_H_
 
 #include <ncurses.h>
+#include <errno.h>
 #include "file-data.h"
 #include "say.h"
 
@@ -134,6 +135,11 @@ char confirmDelete(char *fullPath) {
 		char ch = wgetch(dialog);
 		echo();
 		if (ch == 'y') {
+			int deleted = delete_file(fullPath);
+			if (deleted != 0) {
+				mvwprintw(dialog, 8, 5, "%d", deleted);
+			}
+			say("file deleted", SAY_NOW | SAY_ASYNC);
 			break;
 		}
 		else if (ch == 'n') {
