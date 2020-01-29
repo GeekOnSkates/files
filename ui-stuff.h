@@ -6,14 +6,15 @@
 #include "file-data.h"
 #include "say.h"
 
-#define WINDOW_EXIT 0
-#define WINDOW_MAIN 1
-#define WINDOW_CONFIRM_DELETE 2
+#define WINDOW_EXIT				0
+#define WINDOW_MAIN				1
+#define WINDOW_CONFIRM_DELETE	2
+#define WINDOW_RENAME_FILE		3
 
 char ui_cleared(unsigned int list_width, unsigned int list_height);
 void ui_show_instructions(char speak);
 char ui_updated(unsigned int list_width, unsigned int list_height, const char *text, unsigned int selection, int key);
-void enter_text(int key, unsigned int *cursor, char *text);
+void enter_text(int key, unsigned int *cursor, char *text, int x, int y);
 void ui_restore_selection(char *path, char *text, int *cursor, int *selection);
 
 char mainScreen(char speak, char *fullPath) {
@@ -49,6 +50,15 @@ char mainScreen(char speak, char *fullPath) {
 			destroy_window(path);
 			destroy_window(list);
 			return WINDOW_CONFIRM_DELETE;
+		}
+		if (ch == KEY_F(2) && selection > -1) {
+			strcpy(fullPath, text);
+			if (fullPath[strlen(fullPath) - 1] != '/')
+				strcat(fullPath, "/");
+			strcat(fullPath, selectedFile);
+			destroy_window(path);
+			destroy_window(list);
+			return WINDOW_RENAME_FILE;
 		}
 		if (ch == KEY_UP) {
 			FileList *f = get_updated_files(text);
@@ -120,7 +130,7 @@ char mainScreen(char speak, char *fullPath) {
 		else {
 			selection = -1;
 			curs_set(1);
-			enter_text(ch, &cursor, text);
+			enter_text(ch, &cursor, text, 1, 1);
 		}
 		if (!ui_updated(list_width, list_height, text, selection, ch)) {
 			// TO-DO: replace this with logging.  At this point,
@@ -169,6 +179,63 @@ char confirmDelete(char *fullPath) {
 			mvwprintw(dialog, 7, 1, "Invalid choice.");
 			say("Invalid choice.", SAY_NOW | SAY_ASYNC);
 		}
+	}
+	destroy_window(dialog);
+	return WINDOW_MAIN;
+}
+
+char renameFile(char *path) {
+	endwin();
+	initscr();
+	unsigned int cursor = 0;
+	char name[PATH_MAX];
+	char oldName[PATH_MAX];
+	memset(name, 0, PATH_MAX);
+	memset(oldName, 0, PATH_MAX);
+	size_t length = strlen(path);
+	size_t slash = 0;
+	for (size_t i = length; i > 0; i--) {
+		if (path[i] == '/') {
+			slash = i + 1;
+			break;
+		}
+	}
+	for (size_t i=slash; i<PATH_MAX; i++)
+		oldName[i - slash] = path[i];
+	
+	WINDOW *dialog = create_window(0, 0, COLS, LINES);
+	say("Rename file:", SAY_NOW | SAY_ASYNC);
+	say(oldName, SAY_ASYNC);
+	
+	curs_set(1);
+	while(1) {
+		endwin();
+		initscr();
+		noraw();
+		raw();
+		mvwprintw(dialog, 1, 1, "Are you sure you want to delete this file?");
+		mvwprintw(dialog, 3, 5, "%s", oldName);
+		mvwprintw(dialog, 5, 1, "Enter new name, then press ENTER.");
+		mvwprintw(dialog, 6, 1, "To cancel, just press ENTER (le.");
+		wrefresh(dialog);
+		mvwprintw(dialog, 7, 5, name);
+		
+		char ch = wgetch(dialog);
+		if (ch == KEY_F(1)) return WINDOW_EXIT;
+		else if (ch == KEY_ENTER || ch == 10) {
+			say(name, SAY_NOW | SAY_ASYNC);
+			return WINDOW_MAIN;	// for now - escaped characters are
+			// getting "double-escaped" (I think?).  This is the same
+			// bug (?) in ncurses that I initially ran into with the
+			// ENTER key on the main screen.  I have no idea what causes
+			// it or what can be done to fix it.  In the ENTER key case,
+			// I called endwin() and then initscr(0 again and that was
+			// enough to work around this pparent bug.  But ncurses got
+			// its bits in a twist again here, and that solution does
+			// not work.  Man I wish it were open-source, or at least
+			// had some better documentation! :D
+		}
+		else enter_text(ch, &cursor, name, 5, 7);
 	}
 	destroy_window(dialog);
 	return WINDOW_MAIN;
@@ -272,17 +339,16 @@ char ui_updated(unsigned int list_width, unsigned int list_height, const char *t
     return 1;
 }
 
-void enter_text(int key, unsigned int *cursor, char *text) {
+void enter_text(int key, unsigned int *cursor, char *text, int x, int y) {
 	if (key == KEY_BACKSPACE) {
 		say("backspace", SAY_NOW | SAY_ASYNC);
 		if ((*cursor) > 0) (*cursor)--;
 		int len = strlen(text);
 		for (int i=(*cursor); i<len; i++)
 			text[i] = text[i + 1];
-		if ((*cursor) == 0) {
-			move(1, 1);
-		}
-		else move(1, (*cursor));
+		if ((*cursor) == 0)
+			move(y, x);
+		else move(y, x + (*cursor));
 	}
 	else if (key == KEY_DC) {
 		say("delete", SAY_NOW | SAY_ASYNC);
@@ -350,7 +416,7 @@ void ui_restore_selection(char *path, char *text, int *cursor, int *selection) {
 		mvprintw(1, 1, text);
 		*cursor = strlen(text);
 		if (fileExists) return;
-				FileList *files = get_updated_files(text);
+		FileList *files = get_updated_files(text);
 		if (files == NULL) return;	// TO-DO: Add some logging
 		while(files->next != NULL) {
 			if (strcmp(name, files->details->d_name) == 0) {

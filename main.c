@@ -30,6 +30,8 @@ int main(int argc, char *argv[]) {
 		}
 		else if (activeWindow == WINDOW_CONFIRM_DELETE)
 			activeWindow = confirmDelete(fullPath);
+		else if (activeWindow == WINDOW_RENAME_FILE)
+			activeWindow = renameFile(fullPath);
 	}
 	
 	clear();
