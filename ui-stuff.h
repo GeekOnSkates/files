@@ -14,17 +14,31 @@ char ui_cleared(unsigned int list_width, unsigned int list_height);
 void ui_show_instructions(char speak);
 char ui_updated(unsigned int list_width, unsigned int list_height, const char *text, unsigned int selection, int key);
 void enter_text(int key, unsigned int *cursor, char *text);
+void ui_restore_selection(char *path, char *text, int *cursor, int *selection);
 
 char mainScreen(char speak, char *fullPath) {
 	char text[PATH_MAX], selectedFile[PATH_MAX];
 	memset(text, 0, PATH_MAX);
 	unsigned int cursor = 0, list_width = COLS - 4, list_height = LINES - 6;
+	int ch, selection = -1;
 	WINDOW *path = create_window(0, 0, COLS, 3);
 	WINDOW *list = create_window(0, 3, COLS, list_height + 2); // +2 for borders
 	ui_show_instructions(speak);
-	move(1, 1);
+	if (strlen(fullPath) > 0) {
+		ui_restore_selection(fullPath, text, &cursor, &selection);
+		if (!ui_updated(list_width, list_height, text, selection, ch)) {
+			// TO-DO: Add some logging here
+			// In the while-loop, this function failing should end the
+			// program; here though, it's just a minor inconvenience,
+			// and doesn't actually break anything (or should it end?
+			// I kind of think the screen not updating until the user
+			// presses a key is better than a crash, but that's just me;
+			// discussion for another day, when there's more than one
+			// geek contributing to this project. :D).
+		}
+	}
+	else move(1, 1);
 	
-	int ch, selection = -1;
 	while(ch = getch()) {
 		if (ch == KEY_F(1)) break;
 		if (ch == KEY_DC && selection != -1) {
@@ -109,6 +123,11 @@ char mainScreen(char speak, char *fullPath) {
 			enter_text(ch, &cursor, text);
 		}
 		if (!ui_updated(list_width, list_height, text, selection, ch)) {
+			// TO-DO: replace this with logging.  At this point,
+			// this if-statement should never return true, but if
+			// it ever does, it should handle this a bit more gracefully.
+			// Users should get a nicer error and the error info should
+			// just be written to a log file.
 			perror("The program crashed with the following info:\n");
 			return WINDOW_EXIT;
 		}
@@ -143,6 +162,7 @@ char confirmDelete(char *fullPath) {
 			break;
 		}
 		else if (ch == 'n') {
+			stop();
 			break;
 		}
 		else {
@@ -295,6 +315,52 @@ void enter_text(int key, unsigned int *cursor, char *text) {
 		say_key(key, SAY_NOW | SAY_ASYNC);
 		text[(*cursor)] = key;
 		(*cursor)++;
+	}
+}
+
+void ui_restore_selection(char *path, char *text, int *cursor, int *selection) {
+	char fileExists = (!file_exists(path));
+	size_t length = strlen(path);
+	if (length == 0) return;
+	size_t filename_length = 0;
+	size_t slash = 0;
+	for (size_t i = length; i > 0; i--) {
+		if (path[i] == '/') {
+			slash = i + 1;
+			break;
+		}
+		filename_length++;
+	}
+	
+	if (filename_length == 0) {
+		strcpy(text, path);
+		mvprintw(1, 1, text);
+		*cursor = strlen(text);
+		*selection = -1;
+	}
+	else {
+		char *name = malloc(filename_length);
+		if (name == NULL) return;	// TO-DO: Add some logging here
+		memset(name, 0, filename_length + 1);
+		for (int i=slash; i<length; i++) {
+			name[i - slash] = path[i];
+			path[i] = 0;
+		}
+		strcpy(text, path);
+		mvprintw(1, 1, text);
+		*cursor = strlen(text);
+		if (fileExists) return;
+				FileList *files = get_updated_files(text);
+		if (files == NULL) return;	// TO-DO: Add some logging
+		while(files->next != NULL) {
+			if (strcmp(name, files->details->d_name) == 0) {
+				*selection = files->ID;
+				break;
+			}
+			files = files->next;
+		}
+		say(name, SAY_ASYNC);
+		free(name);
 	}
 }
 

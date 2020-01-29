@@ -51,6 +51,12 @@ char is_executable(const char *path) {
     return 0;
 }
 
+char file_exists(const char *path) {
+	FILE *file = fopen(path, "r");
+	// TO-DO: Add some logging - I think this sets "errno" or similar.
+    return file != NULL;
+}
+
 int delete_file(const char *path) {
 	if (is_folder(path)) return rmdir(path) == 0 ? 0 : errno;
 	return unlink(path) == 0 ? 0 : errno;
