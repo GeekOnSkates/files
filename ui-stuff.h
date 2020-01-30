@@ -56,9 +56,20 @@ char mainScreen(char speak, char *fullPath) {
 			if (fullPath[strlen(fullPath) - 1] != '/')
 				strcat(fullPath, "/");
 			strcat(fullPath, selectedFile);
-			destroy_window(path);
-			destroy_window(list);
-			return WINDOW_RENAME_FILE;
+			char *command = malloc(sizeof(fullPath) + 17);
+			if (command == NULL) {
+				// Again, replace with logging and a better error
+				// (maybe a little pop-up window)
+				say("Unable to rename file: memory error", SAY_NOW);
+				return WINDOW_MAIN;
+			}
+			strcpy(command, "./rename-file \"");
+			strcat(command, fullPath);
+			strcat(command, "\"");
+			system(command);
+			free(command);
+			endwin();
+			initscr();
 		}
 		if (ch == KEY_UP) {
 			FileList *f = get_updated_files(text);
@@ -185,8 +196,6 @@ char confirmDelete(char *fullPath) {
 }
 
 char renameFile(char *path) {
-	endwin();
-	initscr();
 	unsigned int cursor = 0;
 	char name[PATH_MAX];
 	char oldName[PATH_MAX];
@@ -203,10 +212,8 @@ char renameFile(char *path) {
 	for (size_t i=slash; i<PATH_MAX; i++)
 		oldName[i - slash] = path[i];
 	
-	WINDOW *dialog = create_window(0, 0, COLS, LINES);
-	// most of the experiments described below were on this line.
+	WINDOW *dialog = create_window(2, 2, COLS - 2, LINES - 2);
 	say("Rename file:", SAY_NOW | SAY_ASYNC);
-	refresh();
 	say(oldName, SAY_ASYNC);
 	
 	curs_set(1);
@@ -215,7 +222,6 @@ char renameFile(char *path) {
 		mvwprintw(dialog, 3, 5, "%s", oldName);
 		mvwprintw(dialog, 5, 1, "Enter new name, then press ENTER.");
 		mvwprintw(dialog, 6, 1, "To cancel, just press ENTER (le.");
-		wrefresh(dialog);
 		mvwprintw(dialog, 7, 5, name);
 		
 		char ch = wgetch(dialog);
@@ -223,55 +229,9 @@ char renameFile(char *path) {
 		else if (ch == KEY_ENTER || ch == 10) {
 			say(name, SAY_NOW | SAY_ASYNC);
 			return WINDOW_MAIN;	// for now - escaped characters are
-			/*
-			getting "double-escaped" (I think?).  This is the same
-			bug (?) in ncurses that I initially ran into with the
-			ENTER key on the main screen.  I have no idea what causes
-			it or what can be done to fix it.  In the ENTER key case,
-			I called endwin() and then initscr(0 again and that was
-			enough to work around this pparent bug.  But ncurses got
-			its bits in a twist again here, and that solution does
-			not work.  Man I wish it were open-source, or at least
-			had some better documentation! :D
-			I also tried replacing wgetch with getch, because that's
-			how the main screen did it.  No dice.
-			I also tried keypad(dialog, TRUE);  No dice.
-			
-			POTENTIAL CLUE:
-			"When using getch, wgetch, mvgetch, or mvwgetch, nocbreak mode (nocbreak!) and echo mode (echo!) should not be used at the same time. Depending on the state of the TTY driver when each character is typed, the program may produce undesirable results."
-			https://www.gnu.org/software/guile-ncurses/manual/html_node/Getting-characters-from-the-keyboard.html
-			Based on this lead, I tried:
-			* noecho();		didn't work
-			* nocbreak();	EPIC fail - not only did it not work, it broke stuff. :P
-							I should've seen this coming though; I'm using raw(), so
-							I'm 99.999999% sure that doesn't "play nice" with cbreak.
-			* Handling the glitchy character combo (i.e. if ch == (27 | KEY_LEFT);
-							But when I looked at the wacky combo, it was like "^[[D",
-							as if an extra bracket got inserted in there somehow.
-							At this point I'm thinking about taking a serious step
-							backwards and not using ncurses.  Whatever this bug is,
-							I've completely run out of ideas, and haven't found any
-							hint of an inkling of a prayer of a clue anywhere on the
-							interwebz.  Maybe someday, someone who actually maintains
-							ncurses can explain what the puck is goin on here.  But
-							until then, this feature has come to a grinding halt.
-							Because... { legacy? } :D
-			
-			This might also contain a lead or two:
-			https://www.gnu.org/software/guile-ncurses/manual/html_node/Handling-unmapped-keys.html#Handling-unmapped-keys
-			Apparently, other possible causes of this might be:
-			* Some database out of date (which I doubt, cuz IT WORKS ON THE MAIN SCREEN, lol)
-			* there might be a workaround called "define-key" (not valid C variable name, but this docment
-				uses some extremely bizarre syntax for all kinds of things - since when is "true" #t??!! :D
-			Back to the Duck! :D
-			
-			
-			
-			
-			
-			*/
 		}
 		else enter_text(ch, &cursor, name, 5, 7);
+		wrefresh(dialog);
 	}
 	destroy_window(dialog);
 	return WINDOW_MAIN;
